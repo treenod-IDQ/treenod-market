@@ -4,43 +4,43 @@ title: Treenod Claude Code Plugins
 
 # Treenod Claude Code Plugins
 
-Internal plugin marketplace for Treenod organization.
+Treenod 내부용 Claude Code 플러그인 마켓플레이스
 
-## Available Plugins
+## 플러그인 목록
 
 | Plugin | Category | Description |
 |--------|----------|-------------|
-| atlassian | productivity | Confluence and Jira API integration |
-| document-hoarder | productivity | Confluence documentation fetcher |
-| sheet | productivity | Google Sheets API integration |
-| skill-creator | development | Guide for creating Claude Code skills |
-| sql-writer | data | Databricks SQL query generator |
+| atlassian | productivity | Confluence, Jira API 연동 |
+| document-hoarder | productivity | Confluence 문서 로컬 동기화 |
+| sheet | productivity | Google Sheets API 연동 |
+| skill-creator | development | Claude Code skill 생성 가이드 |
+| sql-writer | data | Databricks SQL 쿼리 생성기 |
 
-## Directory Structure
+## 디렉토리 구조
 
 ```
 treenod-claude-plugins/
-├── CLAUDE.md                     # Context for Claude Code
-├── README.md                     # This file
+├── CLAUDE.md                     # Claude Code 컨텍스트
+├── README.md                     # 이 문서
 ├── .claude-plugin/
-│   └── marketplace.json          # Plugin catalog
+│   └── marketplace.json          # 플러그인 카탈로그
 └── plugins/
     └── <plugin-name>/
         ├── .claude-plugin/
-        │   └── plugin.json       # Plugin manifest
+        │   └── plugin.json       # 플러그인 매니페스트
         └── skills/
             └── <skill-name>/
-                ├── SKILL.md      # Skill definition
-                ├── scripts/      # Python scripts
-                └── references/   # Reference docs
+                ├── SKILL.md      # Skill 정의
+                ├── scripts/      # Python 스크립트
+                └── references/   # 참조 문서
 ```
 
-## Workflow Overview
+## 워크플로우 개요
 
 ```mermaid
 flowchart LR
     subgraph Maintainer
-        A[Edit in this repo] --> B[Test locally]
+        A[이 저장소에서 편집] --> B[로컬 테스트]
         B --> C[Commit & Push]
     end
 
@@ -55,131 +55,131 @@ flowchart LR
     end
 ```
 
-## Maintainer Guide
+## 관리자 가이드
 
-### Development Workflow
+### 개발 워크플로우
 
 ```mermaid
 flowchart TD
-    A[Start] --> B{New or Update?}
+    A[시작] --> B{신규 or 업데이트?}
 
-    B -->|New Plugin| C[Create plugin directory]
-    C --> D[Create .claude-plugin/plugin.json]
-    D --> E[Create skills/name/SKILL.md]
-    E --> F[Add to marketplace.json]
+    B -->|신규 플러그인| C[플러그인 디렉토리 생성]
+    C --> D[.claude-plugin/plugin.json 생성]
+    D --> E[skills/name/SKILL.md 생성]
+    E --> F[marketplace.json에 추가]
 
-    B -->|Update Existing| G[Edit plugin files]
-    G --> H[Update version in marketplace.json]
+    B -->|기존 업데이트| G[플러그인 파일 수정]
+    G --> H[marketplace.json 버전 업데이트]
 
-    F --> I[Test in this directory]
+    F --> I[이 디렉토리에서 테스트]
     H --> I
 
-    I --> J{Works?}
-    J -->|No| K[Fix issues]
+    I --> J{동작 확인?}
+    J -->|실패| K[문제 수정]
     K --> I
 
-    J -->|Yes| L[git commit]
+    J -->|성공| L[git commit]
     L --> M[git push]
-    M --> N[Done]
+    M --> N[완료]
 ```
 
-### Create New Plugin
+### 신규 플러그인 생성
 
 ```bash
-# 1. Create directory structure
+# 1. 디렉토리 구조 생성
 mkdir -p plugins/<name>/.claude-plugin
 mkdir -p plugins/<name>/skills/<name>
 
-# 2. Create plugin.json
+# 2. plugin.json 생성
 cat > plugins/<name>/.claude-plugin/plugin.json << 'EOF'
 {
   "name": "<name>",
-  "description": "Plugin description",
+  "description": "플러그인 설명",
   "author": {
     "name": "Treenod Dev Team",
-    "email": "dev@treenod.com"
+    "email": "your-email@treenod.com"
   }
 }
 EOF
 
-# 3. Create SKILL.md
+# 3. SKILL.md 생성
 cat > plugins/<name>/skills/<name>/SKILL.md << 'EOF'
 ---
 name: <name>
-description: Skill description
+description: Skill 설명
 ---
 
-# Skill Title
+# Skill 제목
 
-Documentation content...
+문서 내용...
 EOF
 
-# 4. Add to marketplace.json (plugins array)
-# 5. Test by running Claude Code in this directory
+# 4. marketplace.json의 plugins 배열에 추가
+# 5. 이 디렉토리에서 Claude Code 실행하여 테스트
 # 6. Commit and push
 ```
 
-### Update Existing Plugin
+### 기존 플러그인 업데이트
 
 ```bash
-# 1. Edit plugin files
-# 2. Update version in marketplace.json
-# 3. Update CHANGELOG.md (if exists)
-# 4. Test locally
+# 1. 플러그인 파일 수정
+# 2. marketplace.json 버전 업데이트
+# 3. CHANGELOG.md 업데이트 (있는 경우)
+# 4. 로컬 테스트
 # 5. Commit and push
 ```
 
-### Version Management
+### 버전 관리
 
 ```mermaid
 flowchart LR
-    A[Edit] --> B{Change Type}
-    B -->|Bug fix| C[x.x.PATCH]
-    B -->|New feature| D[x.MINOR.x]
+    A[수정] --> B{변경 유형}
+    B -->|버그 수정| C[x.x.PATCH]
+    B -->|신규 기능| D[x.MINOR.x]
     B -->|Breaking change| E[MAJOR.x.x]
-    C --> F[Update marketplace.json]
+    C --> F[marketplace.json 업데이트]
     D --> F
     E --> F
 ```
 
-## User Guide
+## 사용자 가이드
 
-### First-Time Setup
+### 최초 설정
 
 ```bash
-# Add marketplace
-/plugin marketplace add treenod/treenod-claude-plugins
+# 마켓플레이스 추가
+/plugin marketplace add treenod-drew/treenod-market
 
-# List available plugins
+# 설치 가능한 플러그인 목록 확인
 /plugin
 
-# Install plugins
+# 플러그인 설치
 /plugin install atlassian@treenod-plugins
 /plugin install sql-writer@treenod-plugins
 ```
 
-### Update Plugins
+### 플러그인 업데이트
 
 ```bash
-# Refresh marketplace catalog
+# 마켓플레이스 카탈로그 갱신
 /plugin marketplace update treenod-plugins
 
-# Update specific plugin
+# 특정 플러그인 업데이트
 /plugin update atlassian@treenod-plugins
 ```
 
-### Installation Scope
+### 설치 범위
 
 ```mermaid
 flowchart TD
     A["plugin install"] --> B["~/.claude/plugins/"]
-    B --> C[Available in all projects]
+    B --> C[모든 프로젝트에서 사용 가능]
 
-    D["Project .claude/plugins/"] --> E[Override for specific project]
-    E --> F[Higher priority than user scope]
+    D["프로젝트 .claude/plugins/"] --> E[해당 프로젝트에서만 적용]
+    E --> F[User scope보다 높은 우선순위]
 ```
 
-## Prerequisites
+## 사전 요구사항
 
 ### atlassian / document-hoarder
 - `ATLASSIAN_USER_EMAIL`
@@ -187,13 +187,9 @@ flowchart TD
 - `JIRA_URL`
 
 ### sheet
-- Google Cloud project with Sheets API enabled
-- `gcloud` CLI authenticated
+- Google Cloud 프로젝트 (Sheets API 활성화)
+- `gcloud` CLI 인증 완료
 
 ### sql-writer
-- Databricks workspace access
-- Connection configured
-
-## Support
-
-Contact: dev@treenod.com
+- Databricks workspace 접근 권한
+- Connection 설정 완료
