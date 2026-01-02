@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.1] - 2025-01-02
+
+### Fixed
+
+- `jira_api.py` CLI now matches documented interface
+  - Added subcommand support (`read`, `update`) as documented in SKILL.md
+  - Previously only accepted `<issue_key>` as first argument without subcommand
+  - Implemented `update_jira_issue` function (was documented but missing)
+
+### Known Issues
+
+- `confluence_api.py` `sync` command documented but not implemented (TODO added)
+
 ## [0.5.0] - 2024-12-23
 
 ### Added

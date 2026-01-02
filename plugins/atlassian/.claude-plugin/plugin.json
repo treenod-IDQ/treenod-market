@@ -1,5 +1,6 @@
 {
   "name": "atlassian",
+  "version": "0.5.1",
   "description": "Read and update Confluence pages and Jira issues via REST APIs with automatic ADF to Markdown conversion",
   "author": {
     "name": "Treenod Dev Team",

@@ -412,6 +412,12 @@ if __name__ == "__main__":
     attach_parser.add_argument("-f", "--file", required=True, help="File to upload")
     attach_parser.add_argument("-c", "--comment", help="Optional comment for attachment")
 
+    # TODO: Implement sync command (documented in SKILL.md but not implemented)
+    # sync_parser = subparsers.add_parser("sync", help="Sync folder to Confluence")
+    # sync_parser.add_argument("folder", help="Local folder path")
+    # sync_parser.add_argument("parent_id", help="Parent page ID")
+    # sync_parser.add_argument("--dry-run", action="store_true", help="Preview without changes")
+
     args = parser.parse_args()
 
     if args.command == "read":
