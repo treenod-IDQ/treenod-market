@@ -6,10 +6,12 @@ title: Treenod Claude Code Plugins
 
 Treenod 내부용 Claude Code 플러그인 마켓플레이스
 
-## 플러그인 목록
+## 플러그인
 
-| Plugin | Category | Description |
-|--------|----------|-------------|
+단일 `util` 플러그인에 모든 스킬이 포함되어 있습니다.
+
+| Skill | Category | Description |
+|-------|----------|-------------|
 | atlassian | productivity | Confluence, Jira API 연동 |
 | document-hoarder | productivity | Confluence 문서 로컬 동기화 |
 | sheet | productivity | Google Sheets API 연동 |
@@ -19,20 +21,21 @@ Treenod 내부용 Claude Code 플러그인 마켓플레이스
 ## 디렉토리 구조
 
 ```
-treenod-claude-plugins/
+treenod-market/
 ├── CLAUDE.md                     # Claude Code 컨텍스트
 ├── README.md                     # 이 문서
 ├── .claude-plugin/
 │   └── marketplace.json          # 플러그인 카탈로그
 └── plugins/
-    └── <plugin-name>/
+    └── util/                     # 통합 유틸리티 플러그인
         ├── .claude-plugin/
         │   └── plugin.json       # 플러그인 매니페스트
         └── skills/
-            └── <skill-name>/
-                ├── SKILL.md      # Skill 정의
-                ├── scripts/      # Python 스크립트
-                └── references/   # 참조 문서
+            ├── atlassian/        # Confluence, Jira API
+            ├── document-hoarder/ # Confluence 문서 동기화
+            ├── sheet/            # Google Sheets API
+            ├── skill-creator/    # Skill 생성 가이드
+            └── sql-writer/       # Databricks SQL
 ```
 
 ## 워크플로우 개요
@@ -83,29 +86,16 @@ flowchart TD
     M --> N[완료]
 ```
 
-### 신규 플러그인 생성
+### 신규 스킬 추가
 
 ```bash
-# 1. 디렉토리 구조 생성
-mkdir -p plugins/<name>/.claude-plugin
-mkdir -p plugins/<name>/skills/<name>
+# 1. 스킬 디렉토리 생성
+mkdir -p plugins/util/skills/<skill-name>
 
-# 2. plugin.json 생성
-cat > plugins/<name>/.claude-plugin/plugin.json << 'EOF'
-{
-  "name": "<name>",
-  "description": "플러그인 설명",
-  "author": {
-    "name": "Treenod Dev Team",
-    "email": "your-email@treenod.com"
-  }
-}
-EOF
-
-# 3. SKILL.md 생성
-cat > plugins/<name>/skills/<name>/SKILL.md << 'EOF'
+# 2. SKILL.md 생성
+cat > plugins/util/skills/<skill-name>/SKILL.md << 'EOF'
 ---
-name: <name>
+name: <skill-name>
 description: Skill 설명
 ---
 
@@ -114,19 +104,17 @@ description: Skill 설명
 문서 내용...
 EOF
 
-# 4. marketplace.json의 plugins 배열에 추가
-# 5. 이 디렉토리에서 Claude Code 실행하여 테스트
-# 6. Commit and push
+# 3. 이 디렉토리에서 Claude Code 실행하여 테스트
+# 4. Commit and push
 ```
 
-### 기존 플러그인 업데이트
+### 기존 스킬 업데이트
 
 ```bash
-# 1. 플러그인 파일 수정
-# 2. marketplace.json 버전 업데이트
-# 3. CHANGELOG.md 업데이트 (있는 경우)
-# 4. 로컬 테스트
-# 5. Commit and push
+# 1. 스킬 파일 수정
+# 2. CHANGELOG.md 업데이트 (있는 경우)
+# 3. 로컬 테스트
+# 4. Commit and push
 ```
 
 ### 버전 관리
@@ -153,9 +141,8 @@ flowchart LR
 # 설치 가능한 플러그인 목록 확인
 /plugin
 
-# 플러그인 설치
-/plugin install atlassian@treenod-plugins
-/plugin install sql-writer@treenod-plugins
+# util 플러그인 설치 (모든 스킬 포함)
+/plugin install util@treenod-plugins
 ```
 
 ### 플러그인 업데이트
@@ -164,8 +151,8 @@ flowchart LR
 # 마켓플레이스 카탈로그 갱신
 /plugin marketplace update treenod-plugins
 
-# 특정 플러그인 업데이트
-/plugin update atlassian@treenod-plugins
+# util 플러그인 업데이트
+/plugin update util@treenod-plugins
 ```
 
 ### 설치 범위
