@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.6.0] - 2025-01-13
+
+### Added
+
+#### Marimo Notebook Converter
+- `marimo_converter.py` - Convert marimo HTML exports to Confluence pages
+  - Extracts `__MARIMO_MOUNT_CONFIG__` from marimo HTML exports
+  - Converts cell outputs to ADF nodes
+  - Auto-extracts page title from first H1, removes duplicate
+  - Uploads Vega-Lite charts as PNG attachments
+  - CLI: `convert <html_file> --page-id <id>` or `--parent-id <id>`
+  - CLI: `preview <html_file>` to inspect structure without uploading
+
+#### HTML to ADF Conversion
+- `html_to_adf.py` - lxml-based HTML to ADF conversion
+  - Supports: headings, paragraphs, lists (nested), tables, code blocks
+  - Inline formatting: bold, italic, code, links, underline, strike
+  - Special handling for marimo's `span.paragraph` wrapper
+
+#### Vega-Lite Renderer
+- `vegalite_renderer.py` - Render Vega-Lite specs to PNG
+  - Uses vl-convert-python for native rendering
+  - 2x scale factor for high-resolution charts
+  - CLI for standalone chart rendering
+
+### Changed
+
+#### Documentation Reorganization
+- Reorganized `docs/` folder structure:
+  - `docs/spec/` - Implementation specifications
+  - `docs/research/` - API research documents
+  - `docs/samples/` - Sample API responses
+  - `docs/tests/` - Integration test scripts
+- Added `docs/README.md` as index for all documentation
+- Renamed files for clarity:
+  - `SPEC.md` -> `spec/implementation.md`
+  - `RESEARCH_DOCUMENT.md` -> `research/atlassian-api.md`
+
+### Dependencies
+
+- New: `lxml` for HTML parsing
+- New: `vl-convert-python` for Vega-Lite rendering
+
 ## [0.5.1] - 2025-01-02
 
 ### Fixed
