@@ -120,6 +120,9 @@ uv run --no-project --with requests python scripts/confluence_api.py attach <pag
 
 # Read Jira issue
 uv run --no-project --with requests python scripts/jira_api.py read <issue_key> -o issue.md
+
+# Convert marimo notebook HTML to Confluence
+uv run --no-project --with requests --with lxml python scripts/marimo_converter.py convert notebook.html --page-id <page_id>
 ```
 
 ## Documentation

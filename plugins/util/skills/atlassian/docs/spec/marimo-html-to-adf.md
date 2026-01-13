@@ -1,7 +1,8 @@
 ---
 title: Marimo HTML to ADF Conversion Specification
 created: 2025-01-13
-status: draft
+updated: 2026-01-13
+status: implemented
 ---
 
 ## Overview
@@ -87,6 +88,41 @@ Non-targets (dynamic/interactive components):
 | `text/plain` | Plain text output | Convert to ADF paragraph |
 | `application/vnd.vegalite.v5+json` | Vega-Lite chart spec | Render to PNG, upload as attachment |
 | `text/html` | Raw HTML output | Parse HTML to ADF |
+
+### Marimo Custom Components (text/html)
+
+Marimo HTML outputs may contain custom web components instead of standard HTML elements:
+
+| Component | Description | Conversion |
+|-----------|-------------|------------|
+| `<marimo-table>` | Data table with JSON in data-data attribute | Parse JSON, convert to ADF table |
+| `<marimo-ui-element>` | Wrapper for interactive components | Traverse children |
+| `<marimo-date>` | Date picker component | Extract value as text |
+| flex div containers | Layout wrappers | Traverse children |
+
+#### marimo-table Structure
+
+```html
+<marimo-ui-element object-id='RGSE-0' random-id='...'>
+  <marimo-table
+    data-initial-value='[]'
+    data-data='&quot;[{&#92;&quot;col1&#92;&quot;:&#92;&quot;value1&#92;&quot;},...]&quot;'
+    data-total-rows='3'
+    data-total-columns='2'>
+  </marimo-table>
+</marimo-ui-element>
+```
+
+The `data-data` attribute contains:
+1. HTML-escaped string (`&quot;` for quotes, `&#92;` for backslash)
+2. Outer quotes wrapping the JSON string
+3. Escaped inner quotes (`\"` for JSON string values)
+
+Parsing steps:
+1. `html.unescape()` to decode HTML entities
+2. Strip outer quotes
+3. Replace `\"` with `"` for JSON parsing
+4. `json.loads()` to parse array of objects
 
 ### Markdown Output Format
 
@@ -370,6 +406,8 @@ def create_table_adf(elem) -> dict:
 | `a` | text with `link` mark | |
 | `hr` | `rule` | |
 | `blockquote` | `blockquote` | |
+| `marimo-table` | `table` | Parse data-data JSON attribute |
+| `marimo-ui-element` | (traverse children) | Wrapper element |
 
 ### 3. vegalite_renderer.py - Chart Rendering
 
@@ -488,36 +526,38 @@ lxml is preferred because:
 
 ### Phase 1: HTML Parsing
 
-- [ ] Extract `__MARIMO_MOUNT_CONFIG__` from HTML
-- [ ] Parse session cells and outputs
-- [ ] Identify output types
+- [x] Extract `__MARIMO_MOUNT_CONFIG__` from HTML
+- [x] Parse session cells and outputs
+- [x] Identify output types
 
 ### Phase 2: HTML to ADF Conversion
 
-- [ ] Implement `html_to_adf.py` module
-- [ ] Support headings, paragraphs, lists
-- [ ] Support tables
-- [ ] Support code blocks
-- [ ] Support inline formatting (bold, italic, code, links)
+- [x] Implement `html_to_adf.py` module
+- [x] Support headings, paragraphs, lists
+- [x] Support tables
+- [x] Support code blocks
+- [x] Support inline formatting (bold, italic, code, links)
+- [x] Support marimo-table custom component (v0.8.0)
+- [x] Support marimo-ui-element wrapper traversal (v0.8.0)
 
 ### Phase 3: Chart Rendering
 
-- [ ] Implement `vegalite_renderer.py` module
-- [ ] Render Vega-Lite specs to PNG
-- [ ] Handle chart dimensions and scale
+- [x] Implement `vegalite_renderer.py` module
+- [x] Render Vega-Lite specs to PNG
+- [x] Handle chart dimensions and scale
 
 ### Phase 4: Integration
 
-- [ ] Implement `marimo_converter.py` main module
-- [ ] Integrate with existing `confluence_api.py`
-- [ ] Upload chart attachments
-- [ ] Create/update pages with ADF content
+- [x] Implement `marimo_converter.py` main module
+- [x] Integrate with existing `confluence_api.py`
+- [x] Upload chart attachments
+- [x] Create/update pages with ADF content
 
 ### Phase 5: CLI and Testing
 
-- [ ] Add CLI interface
-- [ ] Test with real marimo exports
-- [ ] Document usage in SKILL.md
+- [x] Add CLI interface
+- [x] Test with real marimo exports
+- [x] Document usage in SKILL.md
 
 ## Edge Cases
 

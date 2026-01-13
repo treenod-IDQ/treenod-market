@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.8.0] - 2026-01-13
+
+### Fixed
+
+- Fixed marimo HTML conversion missing `<marimo-table>` components
+  - Added `create_marimo_table_adf()` to parse marimo-table data-data attribute
+  - Updated `_get_block_children()` to traverse marimo-ui-element wrappers
+  - Added handler for marimo-ui-element in `convert_element_to_adf()`
+  - Tables stored as escaped JSON in data-data are now properly converted to ADF tables
+
+### Changed
+
+- `html_to_adf.py` now handles marimo custom web components:
+  - `<marimo-table>` - Extracts JSON from data-data attribute, converts to ADF table
+  - `<marimo-ui-element>` - Traverses children to find convertible content
+
 ## [0.7.0] - 2025-01-13
 
 ### Changed

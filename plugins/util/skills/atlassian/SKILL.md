@@ -1,6 +1,6 @@
 ---
 name: atlassian
-description: Read, create, and update Confluence pages and Jira issues via REST APIs with automatic ADF (Atlassian Document Format) to Markdown conversion. Use when users need to (1) Read/Create/Update Confluence pages, (2) Sync local markdown folders to Confluence, (3) Export and update Jira issues (summary, description, labels, links), (4) Convert between ADF and Markdown formats, or (5) Interact with Atlassian Cloud APIs programmatically
+description: Read, create, and update Confluence pages and Jira issues via REST APIs with automatic ADF (Atlassian Document Format) to Markdown conversion. Use when users need to (1) Read/Create/Update Confluence pages from markdown or marimo HTML exports, (2) Sync local markdown folders to Confluence, (3) Export and update Jira issues (summary, description, labels, links), (4) Convert between ADF and Markdown formats, or (5) Interact with Atlassian Cloud APIs programmatically
 ---
 
 # Atlassian API Skill
@@ -30,10 +30,16 @@ uv run --no-project --with requests python scripts/script_name.py [args]
 uv run --no-project --with requests python scripts/confluence_api.py read <page_id> -o output.md
 ```
 
-**Update page from markdown (requires `-f`):**
+**Update page from file (requires `-f`):**
 ```bash
+# From markdown file
 uv run --no-project --with requests python scripts/confluence_api.py update <page_id> -f input.md
+
+# From marimo HTML export (auto-detected, requires lxml)
+uv run --no-project --with requests --with lxml python scripts/confluence_api.py update <page_id> -f notebook.html
 ```
+
+Note: `.html` files are auto-detected and delegated to `marimo_converter.py` for conversion.
 
 **Update with new title:**
 ```bash
@@ -99,6 +105,45 @@ Output includes `file_id` for ADF embedding:
 ```
 
 Note: Use `file_id` (UUID) in ADF media nodes, not the attachment ID (`att...`).
+
+### Marimo Notebook Conversion
+
+Convert marimo HTML exports to Confluence pages.
+
+**Preview marimo HTML structure:**
+```bash
+uv run --no-project --with requests --with lxml python scripts/marimo_converter.py preview notebook.html
+```
+
+Output shows cell count, output types (markdown, html, vegalite):
+```
+Notebook: CI-107_ab_test.py
+Marimo version: 0.19.2
+Cells: 35
+Outputs: 23
+Output types:
+  - markdown: 11
+  - html: 12
+```
+
+**Convert and update existing page:**
+```bash
+uv run --no-project --with requests --with lxml python scripts/marimo_converter.py convert notebook.html --page-id 123456
+```
+
+**Convert and create new page:**
+```bash
+uv run --no-project --with requests --with lxml --with vl-convert-python \
+    python scripts/marimo_converter.py convert notebook.html --parent-id 123456 --title "Analysis Report"
+```
+
+Supported marimo output types:
+- `text/markdown` - Rendered markdown (headings, lists, tables, code blocks)
+- `text/html` - HTML outputs including marimo-table components
+- `application/vnd.vegalite.v5+json` - Vega-Lite charts (rendered as PNG, uploaded as attachment)
+- `text/plain` - Plain text output
+
+Note: Requires `lxml` for HTML parsing. Add `vl-convert-python` if notebook contains Vega-Lite charts.
 
 ### Jira Operations
 

@@ -1,5 +1,8 @@
 """Convert HTML content to Atlassian Document Format (ADF) using lxml."""
 
+import html as html_module
+import json
+
 from lxml import html
 
 
@@ -40,16 +43,27 @@ def html_to_adf(html_content: str) -> list:
 
 
 def _get_block_children(tree) -> list:
-    """Get direct block-level children, handling marimo wrapper spans."""
+    """Get direct block-level children, handling marimo wrapper spans and custom elements."""
     # If root is a marimo markdown wrapper span, get its children
     if tree.tag == 'span' and 'markdown' in tree.get('class', ''):
         return list(tree)
 
-    # If root is html/body, traverse down
+    # Handle marimo-ui-element wrapper - extract children
+    if tree.tag == 'marimo-ui-element':
+        children = []
+        for child in tree:
+            children.extend(_get_block_children(child))
+        return children if children else [tree]
+
+    # Handle marimo-table directly
+    if tree.tag == 'marimo-table':
+        return [tree]
+
+    # If root is html/body/div, traverse down
     if tree.tag in ('html', 'body', 'div'):
         children = []
         for child in tree:
-            if child.tag in ('html', 'body', 'div'):
+            if child.tag in ('html', 'body', 'div', 'marimo-ui-element'):
                 children.extend(_get_block_children(child))
             else:
                 children.append(child)
@@ -100,6 +114,18 @@ def convert_element_to_adf(elem) -> dict | None:
     # Table
     if tag == 'table':
         return create_table_adf(elem)
+
+    # Marimo table component
+    if tag == 'marimo-table':
+        return create_marimo_table_adf(elem)
+
+    # Marimo UI element wrapper - process children
+    if tag == 'marimo-ui-element':
+        for child in elem:
+            result = convert_element_to_adf(child)
+            if result:
+                return result
+        return None
 
     # Code block (pre > code)
     if tag == 'pre':
@@ -407,6 +433,83 @@ def create_table_adf(elem) -> dict:
                 rows.append({"type": "tableRow", "content": cells})
 
     return {"type": "table", "content": rows}
+
+
+def create_marimo_table_adf(elem) -> dict | None:
+    """
+    Convert marimo-table custom element to ADF table node.
+
+    Marimo tables store data in the data-data attribute as escaped JSON.
+    Format: data-data='&quot;[{...}, ...]&quot;'
+
+    Args:
+        elem: lxml marimo-table element
+
+    Returns:
+        dict: ADF table node or None if no data
+    """
+    data_attr = elem.get('data-data')
+    if not data_attr:
+        return None
+
+    try:
+        # Unescape HTML entities
+        json_str = html_module.unescape(data_attr)
+
+        # Remove outer quotes if present (marimo wraps JSON string in quotes)
+        json_str = json_str.strip()
+        if json_str.startswith('"') and json_str.endswith('"'):
+            json_str = json_str[1:-1]
+
+        # Unescape escaped quotes within the string
+        json_str = json_str.replace('\\"', '"')
+        json_str = json_str.replace('\\\\', '\\')
+
+        # Parse JSON
+        rows_data = json.loads(json_str)
+
+        if not rows_data or not isinstance(rows_data, list):
+            return None
+
+        # Extract column headers from first row keys
+        if not rows_data[0]:
+            return None
+
+        headers = list(rows_data[0].keys())
+
+        # Build ADF table
+        table_rows = []
+
+        # Header row
+        header_cells = []
+        for header in headers:
+            header_cells.append({
+                "type": "tableHeader",
+                "content": [{
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": str(header)}]
+                }]
+            })
+        table_rows.append({"type": "tableRow", "content": header_cells})
+
+        # Data rows
+        for row in rows_data:
+            data_cells = []
+            for header in headers:
+                value = row.get(header, '')
+                data_cells.append({
+                    "type": "tableCell",
+                    "content": [{
+                        "type": "paragraph",
+                        "content": [{"type": "text", "text": str(value)}]
+                    }]
+                })
+            table_rows.append({"type": "tableRow", "content": data_cells})
+
+        return {"type": "table", "content": table_rows}
+
+    except (json.JSONDecodeError, KeyError, TypeError):
+        return None
 
 
 def create_code_block_adf(elem) -> dict:
