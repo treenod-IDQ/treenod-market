@@ -1,5 +1,6 @@
 """Convert marimo notebook HTML exports to Confluence pages."""
 
+import base64
 import json
 import os
 import re
@@ -167,6 +168,75 @@ def _extract_vegalite_from_html(html_content: str) -> list:
     return vegalite_specs
 
 
+def _extract_png_from_html(html_content: str) -> list:
+    """
+    Extract PNG images from marimo-mime-renderer elements in HTML.
+
+    Handles two formats:
+    1. Direct image/png MIME type
+    2. application/vnd.marimo+mimebundle containing image/png
+
+    Args:
+        html_content: HTML string that may contain marimo-mime-renderer elements
+
+    Returns:
+        list: List of dicts with 'data' (base64 string) and 'index' (position in HTML)
+    """
+    import html as html_module
+    from lxml import html
+
+    png_images = []
+
+    try:
+        tree = html.fromstring(html_content)
+    except Exception:
+        return []
+
+    # Find all marimo-mime-renderer elements
+    for i, elem in enumerate(tree.iter('marimo-mime-renderer')):
+        mime_type = elem.get('data-mime', '')
+        data_attr = elem.get('data-data', '')
+
+        if not mime_type or not data_attr:
+            continue
+
+        # Unescape mime type
+        mime_type = html_module.unescape(mime_type).strip('"')
+
+        try:
+            # Unescape the data attribute
+            data_str = html_module.unescape(data_attr)
+            data_str = data_str.strip()
+            if data_str.startswith('"') and data_str.endswith('"'):
+                data_str = data_str[1:-1]
+            data_str = data_str.replace('\\"', '"')
+            data_str = data_str.replace('\\n', '\n')
+            data_str = data_str.replace('\\\\', '\\')
+
+            # Handle mimebundle format
+            if mime_type == 'application/vnd.marimo+mimebundle':
+                bundle = json.loads(data_str)
+                if 'image/png' in bundle:
+                    data_str = bundle['image/png']
+                else:
+                    continue
+            elif mime_type != 'image/png':
+                continue
+
+            # Remove data URL prefix if present
+            if data_str.startswith('data:image/png;base64,'):
+                data_str = data_str[len('data:image/png;base64,'):]
+
+            png_images.append({
+                'data': data_str,
+                'index': i
+            })
+        except (json.JSONDecodeError, ValueError, Exception):
+            continue
+
+    return png_images
+
+
 def _remove_mime_renderers_from_html(html_content: str) -> str:
     """
     Remove marimo-mime-renderer elements from HTML, keeping surrounding content.
@@ -228,6 +298,11 @@ def convert_outputs_to_adf(outputs: list, page_id: str = None) -> tuple:
         elif output_type == 'html':
             # Extract vegalite specs from marimo-mime-renderer elements
             vegalite_specs = _extract_vegalite_from_html(data)
+            # Extract PNG images from marimo-mime-renderer elements
+            png_images = _extract_png_from_html(data)
+
+            # Track chart IDs for placeholders
+            chart_ids = []
 
             # Process each vegalite chart
             for vl in vegalite_specs:
@@ -246,6 +321,7 @@ def convert_outputs_to_adf(outputs: list, page_id: str = None) -> tuple:
 
                 chart_id = f"{output['cell_id']}_{chart_counter}"
                 chart_counter += 1
+                chart_ids.append(chart_id)
                 chart_files.append({
                     'path': chart_file,
                     'cell_id': chart_id,
@@ -253,14 +329,42 @@ def convert_outputs_to_adf(outputs: list, page_id: str = None) -> tuple:
                     'height': img_height
                 })
 
+            # Process each PNG image
+            for png in png_images:
+                # Decode base64 and save to temp file
+                png_data = base64.b64decode(png['data'])
+                tmp_file = tempfile.NamedTemporaryFile(
+                    suffix='.png', delete=False
+                )
+                tmp_file.write(png_data)
+                tmp_file.close()
+
+                # Get image dimensions
+                try:
+                    from PIL import Image
+                    with Image.open(tmp_file.name) as img:
+                        img_width, img_height = img.size
+                except ImportError:
+                    img_width, img_height = None, None
+
+                chart_id = f"{output['cell_id']}_{chart_counter}"
+                chart_counter += 1
+                chart_ids.append(chart_id)
+                chart_files.append({
+                    'path': tmp_file.name,
+                    'cell_id': chart_id,
+                    'width': img_width,
+                    'height': img_height
+                })
+
             # Remove mime-renderer elements and convert remaining HTML to ADF
-            cleaned_html = _remove_mime_renderers_from_html(data) if vegalite_specs else data
+            has_media = vegalite_specs or png_images
+            cleaned_html = _remove_mime_renderers_from_html(data) if has_media else data
             nodes = html_to_adf(cleaned_html)
             adf_nodes.extend(nodes)
 
             # Add chart placeholders after the HTML content
-            for vl in vegalite_specs:
-                chart_id = f"{output['cell_id']}_{chart_counter - len(vegalite_specs) + vegalite_specs.index(vl)}"
+            for chart_id in chart_ids:
                 adf_nodes.append({
                     '_chart_placeholder': True,
                     'cell_id': chart_id

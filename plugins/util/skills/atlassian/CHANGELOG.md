@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.11.0] - 2025-01-20
+
+### Added
+
+- Extract and render PNG images from `<marimo-mime-renderer>` elements
+  - Added `_extract_png_from_html()` to parse PNG data from marimo HTML outputs
+  - Handles two formats: direct `image/png` MIME type and `application/vnd.marimo+mimebundle`
+  - Decodes base64 PNG data and saves to temp files for upload
+  - Uses Pillow to detect image dimensions
+  - PNG images now rendered alongside vegalite charts in Confluence pages
+
+### Changed
+
+- `marimo_converter.py`: Refactored chart placeholder logic
+  - Uses unified `chart_ids` list for both vegalite and PNG images
+  - Simplified placeholder generation loop
+
 ## [0.10.0] - 2025-01-20
 
 ### Added
