@@ -101,6 +101,9 @@ def _get_block_children(tree) -> list:
         for child in tree:
             if child.tag in ('html', 'body', 'div', 'marimo-ui-element'):
                 children.extend(_get_block_children(child))
+            elif child.tag == 'span' and 'markdown' in child.get('class', ''):
+                # Handle span.markdown wrapper - extract its children
+                children.extend(_get_block_children(child))
             else:
                 children.append(child)
         return children
@@ -293,55 +296,38 @@ def _process_list_item(li) -> list:
         list: ADF content nodes for the list item
     """
     item_content = []
+    has_nested_list = any(child.tag in ('ul', 'ol') for child in li)
 
-    # Get direct text content (before any nested list)
-    text_parts = []
-    if li.text and li.text.strip():
-        text_parts.append(li.text.strip())
+    if has_nested_list:
+        # Extract inline content before nested list (with proper formatting)
+        inline_content = _extract_li_inline_content(li)
+        if inline_content and inline_content != [{"type": "text", "text": ""}]:
+            item_content.append({
+                "type": "paragraph",
+                "content": inline_content
+            })
 
-    # Collect inline elements and their tails before nested lists
-    for child in li:
-        if child.tag in ('ul', 'ol'):
-            # Process nested list
-            if text_parts or item_content:
-                # First add the text content as paragraph
-                if text_parts and not item_content:
-                    item_content.append({
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": ' '.join(text_parts)}]
-                    })
-                    text_parts = []
-
-            # Add nested list
+        # Add nested lists
+        for child in li:
             if child.tag == 'ul':
                 item_content.append(create_bullet_list_adf(child))
-            else:
+            elif child.tag == 'ol':
                 item_content.append(create_ordered_list_adf(child))
-
-            # Get tail text after nested list
-            if child.tail and child.tail.strip():
-                text_parts.append(child.tail.strip())
-        else:
-            # Inline element - get its text content
-            if child.text:
-                text_parts.append(child.text)
-            if child.tail:
-                text_parts.append(child.tail)
-
-    # If we only have text, create a single paragraph
-    if not item_content:
+    else:
+        # No nested list - create paragraph with inline content
         text = _get_li_text(li).strip()
         if text:
             item_content.append({
                 "type": "paragraph",
                 "content": _extract_li_inline_content(li)
             })
-        else:
-            # Empty list item
-            item_content.append({
-                "type": "paragraph",
-                "content": [{"type": "text", "text": ""}]
-            })
+
+    # Ensure at least one content node (ADF requirement)
+    if not item_content:
+        item_content.append({
+            "type": "paragraph",
+            "content": [{"type": "text", "text": ""}]
+        })
 
     return item_content
 
@@ -471,6 +457,27 @@ def create_table_adf(elem) -> dict:
     return {"type": "table", "content": rows}
 
 
+def _format_cell_value(value) -> str:
+    """
+    Format cell value for display, rounding floats to reasonable precision.
+
+    Args:
+        value: Cell value (any type)
+
+    Returns:
+        str: Formatted string representation
+    """
+    if value is None:
+        return ''
+    if isinstance(value, float):
+        # Round to 4 decimal places, remove trailing zeros
+        if value == int(value):
+            return str(int(value))
+        formatted = f"{value:.4f}".rstrip('0').rstrip('.')
+        return formatted
+    return str(value)
+
+
 def create_marimo_table_adf(elem) -> dict | None:
     """
     Convert marimo-table custom element to ADF table node.
@@ -537,7 +544,7 @@ def create_marimo_table_adf(elem) -> dict | None:
                     "type": "tableCell",
                     "content": [{
                         "type": "paragraph",
-                        "content": [{"type": "text", "text": str(value)}]
+                        "content": [{"type": "text", "text": _format_cell_value(value)}]
                     }]
                 })
             table_rows.append({"type": "tableRow", "content": data_cells})
@@ -627,14 +634,20 @@ def create_adf_document(nodes: list) -> dict:
     }
 
 
-def create_media_single_node(file_id: str, collection: str, width: int = None) -> dict:
+def create_media_single_node(
+    file_id: str,
+    collection: str,
+    width: int = None,
+    width_type: str = "percentage"
+) -> dict:
     """
     Create ADF mediaSingle node for an attachment.
 
     Args:
         file_id: Attachment file UUID
         collection: Collection name (contentId-pageId)
-        width: Optional width percentage (1-100)
+        width: Optional width value (1-100 for percentage, pixels for pixel)
+        width_type: "percentage" (default) or "pixel"
 
     Returns:
         dict: ADF mediaSingle node
@@ -656,5 +669,6 @@ def create_media_single_node(file_id: str, collection: str, width: int = None) -
 
     if width:
         media_single["attrs"]["width"] = width
+        media_single["attrs"]["widthType"] = width_type
 
     return media_single

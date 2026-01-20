@@ -85,8 +85,10 @@ def extract_cell_outputs(config: dict) -> list:
                     'output_type': 'markdown',
                     'data': data['text/markdown']
                 })
-            elif 'application/vnd.vegalite.v5+json' in data:
-                spec_data = data['application/vnd.vegalite.v5+json']
+            elif any(k.startswith('application/vnd.vegalite.v') for k in data.keys()):
+                # Support vegalite v3, v4, v5+
+                vegalite_key = next(k for k in data.keys() if k.startswith('application/vnd.vegalite.v'))
+                spec_data = data[vegalite_key]
                 # Handle both string and dict
                 if isinstance(spec_data, str):
                     spec_data = json.loads(spec_data)
@@ -111,6 +113,94 @@ def extract_cell_outputs(config: dict) -> list:
     return outputs
 
 
+def _extract_vegalite_from_html(html_content: str) -> list:
+    """
+    Extract vegalite specs from marimo-mime-renderer elements in HTML.
+
+    Args:
+        html_content: HTML string that may contain marimo-mime-renderer elements
+
+    Returns:
+        list: List of dicts with 'spec' (vegalite dict) and 'index' (position in HTML)
+    """
+    import html as html_module
+    from lxml import html
+
+    vegalite_specs = []
+
+    try:
+        tree = html.fromstring(html_content)
+    except Exception:
+        return []
+
+    # Find all marimo-mime-renderer elements
+    for i, elem in enumerate(tree.iter('marimo-mime-renderer')):
+        mime_type = elem.get('data-mime', '')
+        data_attr = elem.get('data-data', '')
+
+        if not mime_type or not data_attr:
+            continue
+
+        # Unescape and check if it's vegalite
+        mime_type = html_module.unescape(mime_type).strip('"')
+        if not mime_type.startswith('application/vnd.vegalite.v'):
+            continue
+
+        try:
+            # Unescape the data attribute
+            json_str = html_module.unescape(data_attr)
+            json_str = json_str.strip()
+            if json_str.startswith('"') and json_str.endswith('"'):
+                json_str = json_str[1:-1]
+            json_str = json_str.replace('\\"', '"')
+            json_str = json_str.replace('\\n', '\n')
+            json_str = json_str.replace('\\\\', '\\')
+
+            spec = json.loads(json_str)
+            vegalite_specs.append({
+                'spec': spec,
+                'index': i
+            })
+        except (json.JSONDecodeError, ValueError):
+            continue
+
+    return vegalite_specs
+
+
+def _remove_mime_renderers_from_html(html_content: str) -> str:
+    """
+    Remove marimo-mime-renderer elements from HTML, keeping surrounding content.
+
+    Args:
+        html_content: HTML string
+
+    Returns:
+        str: HTML with mime-renderer elements removed
+    """
+    from lxml import html
+    from lxml.html import tostring
+
+    try:
+        tree = html.fromstring(html_content)
+    except Exception:
+        return html_content
+
+    # Find and remove all marimo-mime-renderer elements
+    for elem in tree.iter('marimo-mime-renderer'):
+        parent = elem.getparent()
+        if parent is not None:
+            # Preserve tail text
+            if elem.tail:
+                prev = elem.getprevious()
+                if prev is not None:
+                    prev.tail = (prev.tail or '') + elem.tail
+                else:
+                    parent.text = (parent.text or '') + elem.tail
+            parent.remove(elem)
+
+    return tostring(tree, encoding='unicode')
+
+
 def convert_outputs_to_adf(outputs: list, page_id: str = None) -> tuple:
     """
     Convert cell outputs to ADF nodes.
@@ -124,6 +214,7 @@ def convert_outputs_to_adf(outputs: list, page_id: str = None) -> tuple:
     """
     adf_nodes = []
     chart_files = []
+    chart_counter = 0
 
     for output in outputs:
         output_type = output['output_type']
@@ -135,9 +226,45 @@ def convert_outputs_to_adf(outputs: list, page_id: str = None) -> tuple:
             adf_nodes.extend(nodes)
 
         elif output_type == 'html':
-            # Parse raw HTML to ADF
-            nodes = html_to_adf(data)
+            # Extract vegalite specs from marimo-mime-renderer elements
+            vegalite_specs = _extract_vegalite_from_html(data)
+
+            # Process each vegalite chart
+            for vl in vegalite_specs:
+                chart_file = render_vegalite_to_png(
+                    vl['spec'],
+                    output_path=None,
+                    scale=2.0
+                )
+                # Get image dimensions for proper sizing
+                try:
+                    from PIL import Image
+                    with Image.open(chart_file) as img:
+                        img_width, img_height = img.size
+                except ImportError:
+                    img_width, img_height = None, None
+
+                chart_id = f"{output['cell_id']}_{chart_counter}"
+                chart_counter += 1
+                chart_files.append({
+                    'path': chart_file,
+                    'cell_id': chart_id,
+                    'width': img_width,
+                    'height': img_height
+                })
+
+            # Remove mime-renderer elements and convert remaining HTML to ADF
+            cleaned_html = _remove_mime_renderers_from_html(data) if vegalite_specs else data
+            nodes = html_to_adf(cleaned_html)
             adf_nodes.extend(nodes)
+
+            # Add chart placeholders after the HTML content
+            for vl in vegalite_specs:
+                chart_id = f"{output['cell_id']}_{chart_counter - len(vegalite_specs) + vegalite_specs.index(vl)}"
+                adf_nodes.append({
+                    '_chart_placeholder': True,
+                    'cell_id': chart_id
+                })
 
         elif output_type == 'vegalite':
             # Render chart to PNG (defer upload)
@@ -196,12 +323,26 @@ def upload_charts_and_replace_placeholders(
             comment=f"Chart from cell {cell_id}"
         )
 
-        # Create media node
+        # Create media node with width capped to Confluence container (760px)
         if result.get('file_id') and result.get('collection'):
-            chart_media[cell_id] = create_media_single_node(
-                result['file_id'],
-                result['collection']
-            )
+            # Only set width if image is larger than container
+            max_width = 760
+            img_width = chart.get('width')
+
+            if img_width and img_width > max_width:
+                # Cap to container width
+                chart_media[cell_id] = create_media_single_node(
+                    result['file_id'],
+                    result['collection'],
+                    width=max_width,
+                    width_type="pixel"
+                )
+            else:
+                # Use original size (no width constraint)
+                chart_media[cell_id] = create_media_single_node(
+                    result['file_id'],
+                    result['collection']
+                )
 
         # Clean up temp file
         try:

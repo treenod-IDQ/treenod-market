@@ -128,22 +128,23 @@ Output types:
 
 **Convert and update existing page:**
 ```bash
-uv run --no-project --with requests --with lxml python scripts/marimo_converter.py convert notebook.html --page-id 123456
+uv run --no-project --with requests --with lxml --with vl-convert-python --with pillow \
+    python scripts/marimo_converter.py convert notebook.html --page-id 123456
 ```
 
 **Convert and create new page:**
 ```bash
-uv run --no-project --with requests --with lxml --with vl-convert-python \
+uv run --no-project --with requests --with lxml --with vl-convert-python --with pillow \
     python scripts/marimo_converter.py convert notebook.html --parent-id 123456 --title "Analysis Report"
 ```
 
 Supported marimo output types:
 - `text/markdown` - Rendered markdown (headings, lists, tables, code blocks)
-- `text/html` - HTML outputs including marimo-table components
-- `application/vnd.vegalite.v5+json` - Vega-Lite charts (rendered as PNG, uploaded as attachment)
+- `text/html` - HTML outputs including marimo-table components and embedded charts
+- `application/vnd.vegalite.v{3,4,5}+json` - Vega-Lite charts (rendered as PNG, uploaded as attachment)
 - `text/plain` - Plain text output
 
-Note: Requires `lxml` for HTML parsing. Add `vl-convert-python` if notebook contains Vega-Lite charts.
+Note: Requires `lxml` for HTML parsing. Add `vl-convert-python` and `pillow` for Vega-Lite chart rendering with smart width sizing.
 
 ### Jira Operations
 

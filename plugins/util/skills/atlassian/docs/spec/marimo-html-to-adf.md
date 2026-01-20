@@ -1,7 +1,7 @@
 ---
 title: Marimo HTML to ADF Conversion Specification
 created: 2025-01-13
-updated: 2026-01-13
+updated: 2025-01-20
 status: implemented
 ---
 
@@ -86,7 +86,7 @@ Non-targets (dynamic/interactive components):
 |-----------|-------------|------------|
 | `text/markdown` | Rendered markdown as HTML | Parse HTML to ADF |
 | `text/plain` | Plain text output | Convert to ADF paragraph |
-| `application/vnd.vegalite.v5+json` | Vega-Lite chart spec | Render to PNG, upload as attachment |
+| `application/vnd.vegalite.v{3,4,5}+json` | Vega-Lite chart spec (v3, v4, v5) | Render to PNG, upload as attachment |
 | `text/html` | Raw HTML output | Parse HTML to ADF |
 
 ### Marimo Custom Components (text/html)
@@ -96,9 +96,32 @@ Marimo HTML outputs may contain custom web components instead of standard HTML e
 | Component | Description | Conversion |
 |-----------|-------------|------------|
 | `<marimo-table>` | Data table with JSON in data-data attribute | Parse JSON, convert to ADF table |
+| `<marimo-mime-renderer>` | Wrapper for rich outputs (charts, etc.) | Extract vegalite specs, render to PNG |
 | `<marimo-ui-element>` | Wrapper for interactive components | Traverse children |
 | `<marimo-date>` | Date picker component | Extract value as text |
 | flex div containers | Layout wrappers | Traverse children |
+
+#### marimo-mime-renderer Structure (v0.10.0)
+
+Vegalite charts are embedded inside `<marimo-mime-renderer>` elements:
+
+```html
+<marimo-mime-renderer
+  data-mime='"application/vnd.vegalite.v5+json"'
+  data-data='"{\"$schema\": \"https://vega.github.io/schema/vega-lite/v6.1.0.json\", ...}"'>
+</marimo-mime-renderer>
+```
+
+Processing steps:
+1. Find all `<marimo-mime-renderer>` elements in HTML
+2. Check `data-mime` attribute for vegalite MIME type
+3. Extract and unescape `data-data` attribute (JSON spec)
+4. Render vegalite spec to PNG using `vl-convert-python`
+5. Get image dimensions using Pillow
+6. Upload PNG as Confluence attachment
+7. Insert ADF mediaSingle node with smart width:
+   - If image width > 760px: cap to 760px (Confluence container width)
+   - If image width <= 760px: use original size (no stretching)
 
 #### marimo-table Structure
 
@@ -123,6 +146,10 @@ Parsing steps:
 2. Strip outer quotes
 3. Replace `\"` with `"` for JSON parsing
 4. `json.loads()` to parse array of objects
+5. Format cell values with `_format_cell_value()`:
+   - Floats rounded to 4 decimal places (e.g., `0.8516127509168958` → `0.8516`)
+   - Trailing zeros removed (e.g., `1.2000` → `1.2`)
+   - Integer floats displayed as integers (e.g., `5.0` → `5`)
 
 ### Markdown Output Format
 
@@ -406,8 +433,9 @@ def create_table_adf(elem) -> dict:
 | `a` | text with `link` mark | |
 | `hr` | `rule` | |
 | `blockquote` | `blockquote` | |
-| `marimo-table` | `table` | Parse data-data JSON attribute |
+| `marimo-table` | `table` | Parse data-data JSON, format decimals |
 | `marimo-ui-element` | (traverse children) | Wrapper element |
+| `span.markdown` | (traverse children) | Wrapper element (v0.10.0) |
 
 ### 3. vegalite_renderer.py - Chart Rendering
 
@@ -464,8 +492,9 @@ uv run --no-project --with requests,lxml,vl-convert-python \
 | Package | Purpose |
 |---------|---------|
 | `requests` | HTTP client (existing) |
-| `lxml` | HTML parsing with XPath support (new) |
-| `vl-convert-python` | Vega-Lite to PNG rendering (new) |
+| `lxml` | HTML parsing with XPath support |
+| `vl-convert-python` | Vega-Lite to PNG rendering |
+| `pillow` | Image dimension detection for width capping (v0.10.0) |
 
 ### Why lxml over BeautifulSoup
 
@@ -539,12 +568,17 @@ lxml is preferred because:
 - [x] Support inline formatting (bold, italic, code, links)
 - [x] Support marimo-table custom component (v0.8.0)
 - [x] Support marimo-ui-element wrapper traversal (v0.8.0)
+- [x] Format table decimals with `_format_cell_value()` (v0.10.0)
+- [x] Preserve inline formatting in nested list items (v0.10.0)
+- [x] Support span.markdown wrapper traversal (v0.10.0)
 
 ### Phase 3: Chart Rendering
 
 - [x] Implement `vegalite_renderer.py` module
 - [x] Render Vega-Lite specs to PNG
 - [x] Handle chart dimensions and scale
+- [x] Support Vega-Lite v3, v4, v5 mime types (v0.10.0)
+- [x] Extract vegalite from `<marimo-mime-renderer>` elements in HTML (v0.10.0)
 
 ### Phase 4: Integration
 

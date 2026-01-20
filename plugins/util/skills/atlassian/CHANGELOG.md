@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.10.0] - 2025-01-20
+
+### Added
+
+- Extract and render vegalite charts from `<marimo-mime-renderer>` elements
+  - Added `_extract_vegalite_from_html()` to parse vegalite specs embedded in HTML outputs
+  - Added `_remove_mime_renderers_from_html()` to clean HTML after extraction
+  - Charts are rendered to PNG and uploaded as Confluence attachments
+  - Fixes issue where marimo charts were not visible in Confluence pages
+
+- Smart image width capping for Confluence container (760px)
+  - Images larger than 760px are scaled down to fit container
+  - Images smaller than 760px retain original size (no stretching)
+  - Uses Pillow to detect image dimensions before upload
+  - Updated `create_media_single_node()` to support `width_type` parameter
+
+### Fixed
+
+- Fixed marimo-table decimal precision
+  - Added `_format_cell_value()` to round floats to 4 decimal places
+  - Integers like `5.0` now display as `5`
+  - Example: `0.8516127509168958` → `0.8516`
+
+- Fixed list item inline content loss
+  - `_process_list_item()` now preserves inline formatting (bold, italic, links) when nested lists present
+  - Previously, text like `**타겟 변수**: d3` before nested list was lost
+
+- Fixed `span.markdown` wrapper not being traversed
+  - `_get_block_children()` now recursively processes `span.markdown` children
+  - Fixes issue where markdown content wrapped in span was skipped
+
+### Changed
+
+- `marimo_converter.py`: Vega-Lite detection now supports v3, v4, v5+
+  - Changed from exact match `application/vnd.vegalite.v5+json` to prefix match
+  - Enables conversion of notebooks using older vega-lite versions
+
 ## [0.9.0] - 2025-01-14
 
 ### Added
