@@ -572,6 +572,36 @@ def markdown_to_adf(markdown: str) -> dict:
     }
 
 
+def _parse_column_widths(separator_line: str, total_width: int = 760) -> list:
+    """
+    Parse column widths from markdown table separator row.
+
+    Uses dash count ratio to calculate pixel widths.
+
+    Args:
+        separator_line: The separator row (e.g., |------|------------------------|)
+        total_width: Total table width in pixels (default 760)
+
+    Returns:
+        list: Column widths in pixels, or None if parsing fails
+    """
+    parts = separator_line.split('|')[1:-1]
+    if not parts:
+        return None
+
+    # Count dashes in each cell
+    dash_counts = []
+    for part in parts:
+        dashes = part.count('-')
+        dash_counts.append(max(dashes, 1))
+
+    # Calculate widths based on ratio
+    total_dashes = sum(dash_counts)
+    widths = [int((count / total_dashes) * total_width) for count in dash_counts]
+
+    return widths
+
+
 def parse_markdown_table(lines: list, start: int) -> tuple:
     """
     Parse markdown table into ADF table node.
@@ -585,11 +615,13 @@ def parse_markdown_table(lines: list, start: int) -> tuple:
     """
     i = start
     rows = []
+    col_widths = None
 
     while i < len(lines) and lines[i].startswith('|'):
         line = lines[i].strip()
-        # Skip separator row (|---|---|)
+        # Parse separator row for column widths
         if re.match(r'^\|[\s\-:|]+\|$', line):
+            col_widths = _parse_column_widths(line)
             i += 1
             continue
 
@@ -605,15 +637,19 @@ def parse_markdown_table(lines: list, start: int) -> tuple:
     table_rows = []
     for row_idx, cells in enumerate(rows):
         row_content = []
-        for cell in cells:
+        for col_idx, cell in enumerate(cells):
             cell_type = "tableHeader" if row_idx == 0 else "tableCell"
-            row_content.append({
+            cell_node = {
                 "type": cell_type,
                 "content": [{
                     "type": "paragraph",
                     "content": parse_inline_markdown(cell) if cell else []
                 }]
-            })
+            }
+            # Add column width if available
+            if col_widths and col_idx < len(col_widths):
+                cell_node["attrs"] = {"colwidth": [col_widths[col_idx]]}
+            row_content.append(cell_node)
         table_rows.append({
             "type": "tableRow",
             "content": row_content
@@ -706,15 +742,46 @@ _INLINE_PATTERNS = [
     (re.compile(r'\[(.+?)\]\((.+?)\)'), 'link'),
 ]
 
+# Pattern for line breaks in table cells
+_BR_PATTERN = re.compile(r'<br\s*/?>')
+
 
 def parse_inline_markdown(text: str) -> list:
     """
     Parse inline markdown formatting to ADF nodes.
 
-    Supports: **bold**, *italic*, `code`, ~~strike~~, [link](url)
+    Supports: **bold**, *italic*, `code`, ~~strike~~, [link](url), <br> line breaks
 
     Args:
         text: Text with inline markdown
+
+    Returns:
+        list: ADF content nodes
+    """
+    if not text:
+        return []
+
+    # Split by <br> or <br/> tags to handle line breaks
+    segments = _BR_PATTERN.split(text)
+
+    all_nodes = []
+    for idx, segment in enumerate(segments):
+        segment_nodes = _parse_segment_inline(segment)
+        all_nodes.extend(segment_nodes)
+
+        # Add hardBreak between segments (but not after last)
+        if idx < len(segments) - 1:
+            all_nodes.append({"type": "hardBreak"})
+
+    return all_nodes
+
+
+def _parse_segment_inline(text: str) -> list:
+    """
+    Parse inline markdown formatting for a single segment (without <br> tags).
+
+    Args:
+        text: Text segment with inline markdown
 
     Returns:
         list: ADF content nodes

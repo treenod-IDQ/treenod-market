@@ -150,12 +150,11 @@ def _extract_vegalite_from_html(html_content: str) -> list:
         try:
             # Unescape the data attribute
             json_str = html_module.unescape(data_attr)
+            # Use unicode_escape to properly decode escape sequences
+            json_str = json_str.encode('utf-8').decode('unicode_escape')
             json_str = json_str.strip()
             if json_str.startswith('"') and json_str.endswith('"'):
                 json_str = json_str[1:-1]
-            json_str = json_str.replace('\\"', '"')
-            json_str = json_str.replace('\\n', '\n')
-            json_str = json_str.replace('\\\\', '\\')
 
             spec = json.loads(json_str)
             vegalite_specs.append({

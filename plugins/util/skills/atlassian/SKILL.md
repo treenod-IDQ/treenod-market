@@ -277,11 +277,29 @@ The skill handles conversion between Atlassian Document Format (ADF) and Markdow
 - Task lists with checkboxes (`- [x]` / `- [ ]`)
 - Code blocks with language syntax
 - Blockquotes
-- Tables
+- Tables (with column width control)
 - Horizontal rules
 - Collapsible sections (expand) as `<details>` HTML
 - Smart links (inlineCard) for Confluence/Jira URLs
 - Extension macros as HTML comments
+
+**Table column widths:**
+Use dash count in separator row to control column widths:
+```markdown
+| Label | Description |
+|------|------------------------|
+| Item | Long content column |
+```
+- More dashes = wider column (ratio-based)
+- Example: 6 dashes vs 24 dashes = 1:4 width ratio
+
+**Line breaks in table cells:**
+Use `<br>` tag for line breaks within table cells:
+```markdown
+| Category | Items |
+|----------|-------|
+| List | - First<br>- Second<br>- Third |
+```
 
 **Limitations:**
 - Complex tables may lose some formatting
@@ -325,3 +343,12 @@ Verify API token has appropriate permissions for the space/project.
 
 **Version conflicts:**
 When updating Confluence pages, ensure you're working with the latest version. The script automatically increments the version number.
+
+## Changelog
+
+- **1.2.7** - Fix vegalite extraction: use unicode_escape for proper escape sequence decoding
+- **1.2.6** - Add slack skill
+- **1.2.5** - Add log spec research to sql-writer skill
+- **1.2.4** - Add PNG image extraction from marimo HTML exports
+- **1.2.3** - Fix marimo HTML conversion: vegalite extraction, table precision, list formatting
+- **1.2.2** - Add ADF spacing for Confluence rendering
