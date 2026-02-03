@@ -25,6 +25,7 @@ Treenod 내부용 Claude Code 플러그인 마켓플레이스
 | atlassian | Confluence, Jira API 연동 |
 | document-hoarder | Confluence 문서 로컬 동기화 |
 | sheet | Google Sheets API 연동 |
+| slack | Slack 채널 메시지, 스레드 조회 |
 | skill-creator | Claude Code skill 생성 가이드 |
 | sql-writer | Databricks SQL 쿼리 생성기 |
 
