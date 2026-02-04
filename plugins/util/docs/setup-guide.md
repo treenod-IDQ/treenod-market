@@ -9,6 +9,7 @@ page_id: 73484927057
 |-------|-----------|----------|
 | atlassian, document-hoarder | uv | ATLASSIAN_USER_EMAIL, ATLASSIAN_API_TOKEN, JIRA_URL |
 | sheet | uv, gcloud | gcloud 로그인으로 대체 | 
+| slack | uv | SLACK_BOT_TOKEN |
 | sql-writer | uv | DATABRICKS_TOKEN, DATABRICKS_HOST |
 | skill-creator | 없음 | 없음 |
 
@@ -209,6 +210,41 @@ gcloud auth application-default login --scopes=https://www.googleapis.com/auth/c
 
 브라우저에서 Google 계정 인증 후 사용 가능.
 
+### Slack Bot Token
+
+필요 스킬: slack
+
+#### Slack App 설정
+
+1. https://api.slack.com/apps 접속
+2. 기존 앱 선택 또는 Create New App > From scratch
+3. OAuth & Permissions 메뉴로 이동
+4. Bot Token Scopes에 다음 scope 추가:
+   - `channels:history` - 공개 채널 메시지 읽기
+   - `channels:read` - 공개 채널 정보 조회
+   - `groups:history` - 비공개 채널 메시지 읽기
+   - `groups:read` - 비공개 채널 정보 조회
+5. Install to Workspace 클릭 후 권한 승인
+6. Bot User OAuth Token 복사 (`xoxb-`로 시작)
+
+#### 환경 변수 설정
+
+shell 설정 파일에 추가:
+
+```bash
+export SLACK_BOT_TOKEN="xoxb-your-bot-token"
+```
+
+#### 채널에 봇 초대
+
+봇이 메시지를 읽으려면 채널에 초대 필요:
+
+```
+/invite @YourBotName
+```
+
+공식 문서: https://api.slack.com/authentication/token-types
+
 ### Databricks Token
 
 필요 스킬: sql-writer
@@ -255,6 +291,9 @@ token = your-personal-access-token
 echo $ATLASSIAN_USER_EMAIL
 echo $ATLASSIAN_API_TOKEN
 echo $JIRA_URL
+
+# Slack
+echo $SLACK_BOT_TOKEN
 
 # Databricks
 echo $DATABRICKS_HOST

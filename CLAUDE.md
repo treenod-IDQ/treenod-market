@@ -12,6 +12,7 @@ plugins/util/
     ├── document-hoarder/         # Confluence documentation fetcher
     ├── sheet/                    # Google Sheets API integration
     ├── skill-creator/            # Guide for creating Claude Code skills
+    ├── slack/                    # Slack message and thread reader
     └── sql-writer/               # Databricks SQL query generator
 ```
 
@@ -40,10 +41,28 @@ plugins/util/
 | document-hoarder | Confluence documentation fetcher |
 | sheet | Google Sheets API integration |
 | skill-creator | Guide for creating Claude Code skills |
+| slack | Slack message and thread reader |
 | sql-writer | Databricks SQL query generator |
 
 ### Prerequisites
 
 - atlassian/document-hoarder: `ATLASSIAN_USER_EMAIL`, `ATLASSIAN_API_TOKEN`, `JIRA_URL`
 - sheet: Google Cloud project with Sheets API, `gcloud` CLI
+- slack: `SLACK_BOT_TOKEN`
 - sql-writer: Databricks workspace access
+
+### Adding a New Skill Checklist
+
+When adding a new skill, update these files:
+
+1. **Skill files** (in `plugins/util/skills/<skill-name>/`):
+   - `SKILL.md` - Claude Code skill documentation
+   - `README.md` - Setup guide (Korean)
+   - `CHANGELOG.md` - Version history
+   - `scripts/` - Implementation
+
+2. **Documentation updates**:
+   - `CLAUDE.md` - Structure, Available Skills, Prerequisites sections
+   - `README.md` - 스킬 목록 table
+   - `plugins/util/docs/setup-guide.md` - 스킬별 필요 설정 table, 선택 설정 section
+   - Confluence page (page_id in setup-guide.md frontmatter) - run `confluence_api.py update`
