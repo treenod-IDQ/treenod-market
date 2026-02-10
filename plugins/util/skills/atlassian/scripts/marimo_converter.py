@@ -432,19 +432,31 @@ def upload_charts_and_replace_placeholders(
             max_width = 760
             img_width = chart.get('width')
 
-            if img_width and img_width > max_width:
-                # Cap to container width
+            if img_width:
+                if img_width > max_width:
+                    # Oversized: fill container width
+                    chart_media[cell_id] = create_media_single_node(
+                        result['file_id'],
+                        result['collection'],
+                        width=100,
+                        width_type="percentage"
+                    )
+                else:
+                    # Smaller: proportional percentage to avoid stretching
+                    pct = round(img_width / max_width * 100)
+                    chart_media[cell_id] = create_media_single_node(
+                        result['file_id'],
+                        result['collection'],
+                        width=pct,
+                        width_type="percentage"
+                    )
+            else:
+                # Unknown dimensions: fill container
                 chart_media[cell_id] = create_media_single_node(
                     result['file_id'],
                     result['collection'],
-                    width=max_width,
-                    width_type="pixel"
-                )
-            else:
-                # Use original size (no width constraint)
-                chart_media[cell_id] = create_media_single_node(
-                    result['file_id'],
-                    result['collection']
+                    width=100,
+                    width_type="percentage"
                 )
 
         # Clean up temp file

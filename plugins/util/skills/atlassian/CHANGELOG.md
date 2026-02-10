@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.12.0] - 2026-02-10
+
+### Fixed
+
+- Fixed chart images overflowing 760px Confluence container
+  - `scale=2.0` PNG rendering (e.g., 650px spec -> 1300px image) caused overflow
+  - Switched from `widthType: "pixel"` to `widthType: "percentage"` for all chart images
+  - Oversized images (>760px): set to 100% width to fill container
+  - Smaller images: proportional percentage (`img_width / 760 * 100`) to avoid stretching
+  - Unknown dimensions: default to 100% width
+
+- Fixed ordered lists with bold text breaking in Confluence
+  - `1. **Title**: Description` rendered with line break between number and bold text
+  - Confluence renderer quirk: breaks line before `<strong>` at start of list items
+  - Workaround: prepend zero-width space before strong-marked text in list items
+
+### Verified
+
+- `mo.ui.table()` rendering (reported as missing, confirmed fixed in v0.8.0)
+  - `html_to_adf.py` handles `<marimo-table>` and `<marimo-ui-element>` wrappers
+  - Works for both standalone tables and tables embedded in `mo.md()`
+
 ## [0.11.0] - 2025-01-20
 
 ### Added

@@ -394,7 +394,16 @@ def _extract_li_inline_content(li) -> list:
     process_node(li)
 
     content = [n for n in content if n.get('text', '')]
-    return content if content else [{"type": "text", "text": ""}]
+    if not content:
+        return [{"type": "text", "text": ""}]
+
+    # Workaround: Confluence renderer breaks line before strong text at
+    # start of list items. Prepend zero-width space to prevent this.
+    first = content[0]
+    if first.get('marks') and any(m.get('type') == 'strong' for m in first['marks']):
+        content.insert(0, {"type": "text", "text": "\u200b"})
+
+    return content
 
 
 def create_table_adf(elem) -> dict:
