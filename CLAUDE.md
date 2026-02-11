@@ -9,6 +9,7 @@ plugins/util/
 ├── .claude-plugin/plugin.json    # Plugin manifest
 └── skills/
     ├── atlassian/                # Confluence and Jira API integration
+    ├── dashboard-maker/          # Databricks Lakeview dashboard builder
     ├── document-hoarder/         # Confluence documentation fetcher
     ├── sheet/                    # Google Sheets API integration
     ├── skill-creator/            # Guide for creating Claude Code skills
@@ -38,6 +39,7 @@ plugins/util/
 | Skill | Description |
 |-------|-------------|
 | atlassian | Confluence and Jira API integration |
+| dashboard-maker | Databricks Lakeview dashboard builder |
 | document-hoarder | Confluence documentation fetcher |
 | sheet | Google Sheets API integration |
 | skill-creator | Guide for creating Claude Code skills |
@@ -47,6 +49,7 @@ plugins/util/
 ### Prerequisites
 
 - atlassian/document-hoarder: `ATLASSIAN_USER_EMAIL`, `ATLASSIAN_API_TOKEN`, `JIRA_URL`
+- dashboard-maker: `DATABRICKS_HOST`, `DATABRICKS_TOKEN`, Warehouse ID
 - sheet: Google Cloud project with Sheets API, `gcloud` CLI
 - slack: `SLACK_BOT_TOKEN`
 - sql-writer: Databricks workspace access

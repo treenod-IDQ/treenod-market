@@ -1,7 +1,7 @@
 {
   "name": "util",
-  "version": "1.2.9",
-  "description": "Treenod utility plugin with skills for Atlassian (Confluence/Jira), Google Sheets, SQL query writing, and skill creation",
+  "version": "1.3.0",
+  "description": "Treenod utility plugin with skills for Atlassian (Confluence/Jira), Google Sheets, SQL query writing, Lakeview dashboard creation, and skill creation",
   "author": {
     "name": "Analysis Team",
     "email": "minwoo@treenod.com"

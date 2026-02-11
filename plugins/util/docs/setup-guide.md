@@ -11,6 +11,7 @@ page_id: 73484927057
 | sheet | uv, gcloud | gcloud 로그인으로 대체 | 
 | slack | uv | SLACK_BOT_TOKEN |
 | sql-writer | uv | DATABRICKS_TOKEN, DATABRICKS_HOST |
+| dashboard-maker | uv | DATABRICKS_TOKEN, DATABRICKS_HOST |
 | skill-creator | 없음 | 없음 |
 
 ## 필수 설정

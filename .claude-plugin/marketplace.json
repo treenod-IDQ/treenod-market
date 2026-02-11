@@ -9,15 +9,15 @@
   "plugins": [
     {
       "name": "util",
-      "description": "Treenod utility plugin with skills for Atlassian (Confluence/Jira), Google Sheets, SQL query writing, and skill creation",
-      "version": "1.2.9",
+      "description": "Treenod utility plugin with skills for Atlassian (Confluence/Jira), Google Sheets, SQL query writing, Lakeview dashboard creation, and skill creation",
+      "version": "1.3.0",
       "author": {
         "name": "Analysis Team",
         "email": "minwoo@treenod.com"
       },
       "source": "./plugins/util",
       "category": "productivity",
-      "tags": ["confluence", "jira", "google-sheets", "databricks", "sql"]
+      "tags": ["confluence", "jira", "google-sheets", "databricks", "sql", "lakeview", "dashboard"]
     }
   ]
 }
