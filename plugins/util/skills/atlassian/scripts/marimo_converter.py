@@ -114,6 +114,75 @@ def extract_cell_outputs(config: dict) -> list:
     return outputs
 
 
+def _convert_arrow_data_in_spec(spec: dict) -> dict:
+    """
+    Convert Arrow binary data URLs in vegalite spec to inline values.
+
+    Marimo's <marimo-vega> elements may embed data as Arrow IPC binary
+    encoded in data URLs (data:application/vnd.apache.arrow.file;base64,...).
+    vl-convert cannot handle these, so we decode them to inline values.
+
+    Args:
+        spec: Vegalite spec dict
+
+    Returns:
+        dict: Spec with Arrow data URLs replaced by inline values
+    """
+    def _decode_arrow_url(url: str) -> list | None:
+        """Decode Arrow IPC data URL to list of row dicts."""
+        if not url.startswith('data:application/vnd.apache.arrow.file;base64,'):
+            return None
+
+        try:
+            import pyarrow.ipc as ipc
+            import io
+
+            b64_data = url.split(',', 1)[1]
+            arrow_bytes = base64.b64decode(b64_data)
+            reader = ipc.open_file(io.BytesIO(arrow_bytes))
+            table = reader.read_all()
+            columns = table.to_pydict()
+            rows = [dict(zip(columns.keys(), vals)) for vals in zip(*columns.values())]
+            return rows
+        except ImportError:
+            print("Warning: pyarrow not available, cannot decode Arrow data in marimo-vega chart")
+            return None
+        except Exception:
+            return None
+
+    def _convert_dataset(dataset: dict) -> dict:
+        """Convert a single dataset's Arrow URL to inline values."""
+        url = dataset.get('url', '')
+        if isinstance(url, str) and url.startswith('data:application/vnd.apache.arrow.file;base64,'):
+            rows = _decode_arrow_url(url)
+            if rows is not None:
+                dataset = dict(dataset)
+                dataset['values'] = rows
+                del dataset['url']
+        return dataset
+
+    # Process top-level data
+    if 'data' in spec and isinstance(spec['data'], dict):
+        spec = dict(spec)
+        spec['data'] = _convert_dataset(spec['data'])
+
+    # Process named datasets
+    if 'datasets' in spec and isinstance(spec['datasets'], dict):
+        spec = dict(spec)
+        spec['datasets'] = {
+            name: _convert_dataset(ds) if isinstance(ds, dict) else ds
+            for name, ds in spec['datasets'].items()
+        }
+
+    # Process layer/concat specs
+    for key in ('layer', 'concat', 'hconcat', 'vconcat'):
+        if key in spec and isinstance(spec[key], list):
+            spec = dict(spec)
+            spec[key] = [_convert_arrow_data_in_spec(sub) for sub in spec[key]]
+
+    return spec
+
+
 def _extract_vegalite_from_html(html_content: str) -> list:
     """
     Extract vegalite specs from marimo-mime-renderer elements in HTML.
@@ -160,6 +229,26 @@ def _extract_vegalite_from_html(html_content: str) -> list:
             vegalite_specs.append({
                 'spec': spec,
                 'index': i
+            })
+        except (json.JSONDecodeError, ValueError):
+            continue
+
+    # Also check marimo-vega elements (from mo.ui.altair_chart() in vstack)
+    for i, elem in enumerate(tree.iter('marimo-vega')):
+        data_spec = elem.get('data-spec', '')
+        if not data_spec:
+            continue
+
+        try:
+            spec_str = html_module.unescape(data_spec)
+            spec = json.loads(spec_str)
+
+            # Convert Arrow binary data URLs to inline values
+            spec = _convert_arrow_data_in_spec(spec)
+
+            vegalite_specs.append({
+                'spec': spec,
+                'index': len(vegalite_specs)
             })
         except (json.JSONDecodeError, ValueError):
             continue
@@ -254,18 +343,19 @@ def _remove_mime_renderers_from_html(html_content: str) -> str:
     except Exception:
         return html_content
 
-    # Find and remove all marimo-mime-renderer elements
-    for elem in tree.iter('marimo-mime-renderer'):
-        parent = elem.getparent()
-        if parent is not None:
-            # Preserve tail text
-            if elem.tail:
-                prev = elem.getprevious()
-                if prev is not None:
-                    prev.tail = (prev.tail or '') + elem.tail
-                else:
-                    parent.text = (parent.text or '') + elem.tail
-            parent.remove(elem)
+    # Find and remove all marimo-mime-renderer and marimo-vega elements
+    for tag in ('marimo-mime-renderer', 'marimo-vega'):
+        for elem in tree.iter(tag):
+            parent = elem.getparent()
+            if parent is not None:
+                # Preserve tail text
+                if elem.tail:
+                    prev = elem.getprevious()
+                    if prev is not None:
+                        prev.tail = (prev.tail or '') + elem.tail
+                    else:
+                        parent.text = (parent.text or '') + elem.tail
+                parent.remove(elem)
 
     return tostring(tree, encoding='unicode')
 

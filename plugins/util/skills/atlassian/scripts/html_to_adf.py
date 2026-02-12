@@ -393,7 +393,20 @@ def _extract_li_inline_content(li) -> list:
 
     process_node(li)
 
-    content = [n for n in content if n.get('text', '')]
+    content = [n for n in content if n.get('text', '').strip() or n.get('text', '') == ' ']
+
+    # Strip leading/trailing whitespace from li content to prevent
+    # unwanted linebreaks in Confluence rendering
+    if content:
+        first_text = content[0].get('text', '')
+        if first_text != first_text.lstrip():
+            content[0] = dict(content[0])
+            content[0]['text'] = first_text.lstrip()
+        last_text = content[-1].get('text', '')
+        if last_text != last_text.rstrip():
+            content[-1] = dict(content[-1])
+            content[-1]['text'] = last_text.rstrip()
+
     if not content:
         return [{"type": "text", "text": ""}]
 

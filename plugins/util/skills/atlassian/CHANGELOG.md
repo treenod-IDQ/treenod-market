@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.13.0] - 2026-02-12
+
+### Added
+
+- Support for `<marimo-vega>` custom elements in marimo HTML conversion
+  - `mo.ui.altair_chart()` inside `mo.vstack()` generates `<marimo-vega>` instead of `<marimo-mime-renderer>`
+  - Extracts vegalite spec from `data-spec` attribute
+  - Converts Arrow binary data URLs to inline values using pyarrow
+  - Added `_convert_arrow_data_in_spec()` helper for Arrow IPC decoding
+  - Handles nested specs (layer, concat, hconcat, vconcat)
+  - Graceful fallback when pyarrow is not installed
+
+### Fixed
+
+- Fixed list item linebreak issue in `html_to_adf.py`
+  - Long text in `<li>` elements rendered with unwanted linebreak before content in Confluence
+  - `_extract_li_inline_content()` now strips leading/trailing whitespace from text nodes
+  - Updated empty node filter to match `extract_inline_content()` behavior
+
 ## [0.12.0] - 2026-02-10
 
 ### Fixed
